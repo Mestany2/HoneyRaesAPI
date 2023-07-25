@@ -127,6 +127,19 @@ app.MapGet("/servicetickets/{id}", (int id) =>
     return Results.Ok(serviceTicket);
 });
 
+app.MapPost("/servicetickets", (ServiceTicket serviceTicket) =>
+{
+    // creates a new id (When we get to it later, our SQL database will do this for us like JSON Server did!)
+    serviceTicket.Id = serviceTicketsList.Max(st => st.Id) + 1;
+    serviceTicketsList.Add(serviceTicket);
+    return serviceTicket;
+});
+
+app.MapDelete("/servicetickets/{id}", (int id) =>
+{
+    ServiceTicket serviceTicket = serviceTicketsList.FirstOrDefault(st => st.Id == id);
+    serviceTicketsList.Remove(serviceTicket);
+});
 //Employees Endpoints
 
 app.MapGet("/employees", () =>
