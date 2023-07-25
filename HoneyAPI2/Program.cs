@@ -108,6 +108,8 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+//Service Tickets Endpoints
+
 app.MapGet("/servicetickets", () =>
 {
     return serviceTicketsList;
@@ -120,8 +122,12 @@ app.MapGet("/servicetickets/{id}", (int id) =>
     {
         return Results.NotFound();
     }
+    serviceTicket.Employee = employeeList.FirstOrDefault(e => e.Id == serviceTicket.EmployeeId);
+    serviceTicket.Customer = customerList.FirstOrDefault(e => e.Id == serviceTicket.CustomerId);
     return Results.Ok(serviceTicket);
 });
+
+//Employees Endpoints
 
 app.MapGet("/employees", () =>
 {
@@ -135,9 +141,14 @@ app.MapGet("/employees/{id}", (int id) =>
     {
         return Results.NotFound();
     }
+    employee.ServiceTickets = serviceTicketsList.Where(st => st.EmployeeId == id).ToList();
     return Results.Ok(employee);
 
-});app.MapGet("/customers", () =>
+});
+
+//Customer Endpoint
+
+app.MapGet("/customers", () =>
 {
     return customerList;
 });
@@ -149,7 +160,9 @@ app.MapGet("/customers/{id}", (int id) =>
     {
         return Results.NotFound();
     }
+    customer.ServiceTickets = serviceTicketsList.Where(st => st.CustomerId == id).ToList();
     return Results.Ok(customer);
 });
+
 
 app.Run();
