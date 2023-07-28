@@ -52,7 +52,7 @@ List<ServiceTicket> serviceTicketsList = new List<ServiceTicket>()
         EmployeeId = 4,
         Description = "Office Party",
         Emergency = false,
-        DateCompleted = "2023-07-01"
+        DateCompleted = new DateTime(2023,05,31)
     },    
     new ServiceTicket
     {
@@ -61,7 +61,7 @@ List<ServiceTicket> serviceTicketsList = new List<ServiceTicket>()
         EmployeeId = 5,
         Description = "Budget Review",
         Emergency = false,
-        DateCompleted = "2023-07-05"
+        DateCompleted = new DateTime(2023,05,31)
     },    
     new ServiceTicket
     {
@@ -108,6 +108,8 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+//Service Tickets Endpoints
+
 app.MapGet("/servicetickets", () =>
 {
     return serviceTicketsList;
@@ -120,8 +122,48 @@ app.MapGet("/servicetickets/{id}", (int id) =>
     {
         return Results.NotFound();
     }
+    serviceTicket.Employee = employeeList.FirstOrDefault(e => e.Id == serviceTicket.EmployeeId);
+    serviceTicket.Customer = customerList.FirstOrDefault(e => e.Id == serviceTicket.CustomerId);
     return Results.Ok(serviceTicket);
 });
+
+app.MapPost("/servicetickets", (ServiceTicket serviceTicket) =>
+{
+    // creates a new id (When we get to it later, our SQL database will do this for us like JSON Server did!)
+    serviceTicket.Id = serviceTicketsList.Max(st => st.Id) + 1;
+    serviceTicketsList.Add(serviceTicket);
+    return serviceTicket;
+});
+
+app.MapDelete("/servicetickets/{id}", (int id) =>
+{
+    ServiceTicket serviceTicket = serviceTicketsList.FirstOrDefault(st => st.Id == id);
+    serviceTicketsList.Remove(serviceTicket);
+});
+
+app.MapPut("/servicetickets/{id}", (int id, ServiceTicket serviceTicket) =>
+{
+    ServiceTicket ticketToUpdate = serviceTicketsList.FirstOrDefault(st => st.Id == id);
+    int ticketIndex = serviceTicketsList.IndexOf(ticketToUpdate);
+    if (ticketToUpdate == null)
+    {
+        return Results.NotFound();
+    }
+    //the id in the request route doesn't match the id from the ticket in the request body. That's a bad request!
+    if (id != serviceTicket.Id)
+    {
+        return Results.BadRequest();
+    }
+    serviceTicketsList[ticketIndex] = serviceTicket;
+    return Results.Ok();
+});
+
+app.MapPost("/servicetickets/{id}/complete", (int id) =>
+{
+    ServiceTicket ticketToComplete = serviceTicketsList.FirstOrDefault(st => st.Id == id);
+    ticketToComplete.DateCompleted = DateTime.Today;
+});
+//Employees Endpoints
 
 app.MapGet("/employees", () =>
 {
@@ -135,9 +177,14 @@ app.MapGet("/employees/{id}", (int id) =>
     {
         return Results.NotFound();
     }
+    employee.ServiceTickets = serviceTicketsList.Where(st => st.EmployeeId == id).ToList();
     return Results.Ok(employee);
 
-});app.MapGet("/customers", () =>
+});
+
+//Customer Endpoint
+
+app.MapGet("/customers", () =>
 {
     return customerList;
 });
@@ -149,7 +196,9 @@ app.MapGet("/customers/{id}", (int id) =>
     {
         return Results.NotFound();
     }
+    customer.ServiceTickets = serviceTicketsList.Where(st => st.CustomerId == id).ToList();
     return Results.Ok(customer);
 });
+
 
 app.Run();
