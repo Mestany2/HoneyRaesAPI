@@ -52,7 +52,7 @@ List<ServiceTicket> serviceTicketsList = new List<ServiceTicket>()
         EmployeeId = 4,
         Description = "Office Party",
         Emergency = false,
-        DateCompleted = "2023-07-01"
+        DateCompleted = new DateTime(2023,05,31)
     },    
     new ServiceTicket
     {
@@ -61,7 +61,7 @@ List<ServiceTicket> serviceTicketsList = new List<ServiceTicket>()
         EmployeeId = 5,
         Description = "Budget Review",
         Emergency = false,
-        DateCompleted = "2023-07-05"
+        DateCompleted = new DateTime(2023,05,31)
     },    
     new ServiceTicket
     {
@@ -139,6 +139,29 @@ app.MapDelete("/servicetickets/{id}", (int id) =>
 {
     ServiceTicket serviceTicket = serviceTicketsList.FirstOrDefault(st => st.Id == id);
     serviceTicketsList.Remove(serviceTicket);
+});
+
+app.MapPut("/servicetickets/{id}", (int id, ServiceTicket serviceTicket) =>
+{
+    ServiceTicket ticketToUpdate = serviceTicketsList.FirstOrDefault(st => st.Id == id);
+    int ticketIndex = serviceTicketsList.IndexOf(ticketToUpdate);
+    if (ticketToUpdate == null)
+    {
+        return Results.NotFound();
+    }
+    //the id in the request route doesn't match the id from the ticket in the request body. That's a bad request!
+    if (id != serviceTicket.Id)
+    {
+        return Results.BadRequest();
+    }
+    serviceTicketsList[ticketIndex] = serviceTicket;
+    return Results.Ok();
+});
+
+app.MapPost("/servicetickets/{id}/complete", (int id) =>
+{
+    ServiceTicket ticketToComplete = serviceTicketsList.FirstOrDefault(st => st.Id == id);
+    ticketToComplete.DateCompleted = DateTime.Today;
 });
 //Employees Endpoints
 
