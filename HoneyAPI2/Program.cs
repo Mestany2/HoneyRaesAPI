@@ -1,4 +1,6 @@
 using HoneyAPI2.Models;
+using System.Linq;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -39,6 +41,12 @@ List<Employee> employeeList = new List<Employee>()
         Id = 5,
         Name = "Lauren",
         Specialty = "Manager"
+    },  
+    new Employee
+    {
+        Id = 20,
+        Name = "Smith",
+        Specialty = "Worker"
     },
 
 };
@@ -49,26 +57,27 @@ List<ServiceTicket> serviceTicketsList = new List<ServiceTicket>()
     {
         Id = 5,
         CustomerId = 2,
-        EmployeeId = 4,
         Description = "Office Party",
-        Emergency = false,
-        DateCompleted = new DateTime(2023,05,31)
+        Emergency = true,
+        
     },    
     new ServiceTicket
     {
         Id = 6,
         CustomerId = 1,
-        EmployeeId = 5,
+        EmployeeId = 4,
         Description = "Budget Review",
         Emergency = false,
-        DateCompleted = new DateTime(2023,05,31)
+        DateCompleted = new DateTime(2021,07,21)
     },    
     new ServiceTicket
     {
         Id = 7,
         CustomerId = 3,
+        EmployeeId = 5,
         Description = "Cleaning",
         Emergency = true,
+        DateCompleted = new DateTime(2023,07,21)
     },    
     new ServiceTicket
     {
@@ -77,6 +86,7 @@ List<ServiceTicket> serviceTicketsList = new List<ServiceTicket>()
         EmployeeId = 5,
         Description = "Stock",
         Emergency = true,
+        DateCompleted = new DateTime(2023,07,24)
     },   
     new ServiceTicket
     {
@@ -84,7 +94,6 @@ List<ServiceTicket> serviceTicketsList = new List<ServiceTicket>()
         CustomerId = 3,
         Description = "Mail",
         Emergency = false,
-
     },
 
 };
@@ -158,10 +167,40 @@ app.MapPut("/servicetickets/{id}", (int id, ServiceTicket serviceTicket) =>
     return Results.Ok();
 });
 
+//Past Ticket Review
+
+app.MapGet("/servicetickets/review", () =>
+{
+    List<ServiceTicket> pastreview = serviceTicketsList.OrderBy(d => d.DateCompleted).ToList();
+    return pastreview;
+}
+);
+
+//Prioritized Tickets
+
+app.MapGet("/servicetickets/priority", () =>
+{
+    List<ServiceTicket> Priorityticket = serviceTicketsList.Where(st => st.DateCompleted == new DateTime()).OrderByDescending(st => st.Emergency).ThenByDescending(st => st.EmployeeId).ToList();
+    return Priorityticket;
+}
+);
+
 app.MapPost("/servicetickets/{id}/complete", (int id) =>
 {
     ServiceTicket ticketToComplete = serviceTicketsList.FirstOrDefault(st => st.Id == id);
     ticketToComplete.DateCompleted = DateTime.Today;
+});
+
+app.MapGet("/servicetickets/emergencies", () =>
+{
+    List<ServiceTicket> emergencies = serviceTicketsList.Where(st => st.Emergency == true && st.DateCompleted == new DateTime()).ToList();
+    return emergencies;
+});
+
+app.MapGet("/servicetickets/unassigned", () =>
+{
+    List<ServiceTicket> unassigned = serviceTicketsList.Where(st => st.EmployeeId == null).ToList();
+    return unassigned;
 });
 //Employees Endpoints
 
@@ -182,6 +221,20 @@ app.MapGet("/employees/{id}", (int id) =>
 
 });
 
+app.MapGet("/employees/available", () =>
+{
+    List<Employee> available = employeeList.Where(e => !serviceTicketsList.Any(st => st.EmployeeId == e.Id)).ToList();
+    return available;
+
+});
+
+app.MapGet("/employees/employeeofthemonth", () =>
+{
+    var employeeOfTheMonth = employeeList.OrderByDescending(e => serviceTicketsList.Count(st => st.EmployeeId == e.Id && st.DateCompleted >= DateTime.Now.AddMonths(-1))).FirstOrDefault(); ;
+    return employeeOfTheMonth;
+}
+);
+
 //Customer Endpoint
 
 app.MapGet("/customers", () =>
@@ -199,6 +252,22 @@ app.MapGet("/customers/{id}", (int id) =>
     customer.ServiceTickets = serviceTicketsList.Where(st => st.CustomerId == id).ToList();
     return Results.Ok(customer);
 });
+
+app.MapGet("customers/inactive", () =>
+{
+    List<int> activeIds = serviceTicketsList.Where(t => t.DateCompleted >= DateTime.Today.AddYears(-1)).Select(ticket => ticket.CustomerId).ToList();
+    List<Customer> inactive = customerList.Where(c => !activeIds.Contains(c.Id)).ToList();
+    return inactive;
+});
+
+
+app.MapGet("/customers/byemployee", (int id) =>
+{
+    List<Customer> employeeCustomer = customerList.Where( c => serviceTicketsList.Any(st => st.CustomerId == c.Id && st.EmployeeId == id)).ToList();
+    return employeeCustomer;
+
+});
+
 
 
 app.Run();
